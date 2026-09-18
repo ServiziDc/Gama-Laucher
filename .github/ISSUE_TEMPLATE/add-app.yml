@@ -1,0 +1,21 @@
+name: "Aggiungi app al Launcher"
+description: "Aggiungi una nuova app alla schermata del Gama Launcher"
+title: "[Nuova App] "
+labels: ["add-app"]
+body:
+  - type: input
+    id: app_name
+    attributes:
+      label: Nome app
+      description: Come deve chiamarsi l'app nel launcher
+      placeholder: "Es. Gestione Magazzino"
+    validations:
+      required: true
+  - type: input
+    id: app_url
+    attributes:
+      label: Link (URL)
+      description: L'indirizzo completo dell'app
+      placeholder: "https://servizidc.github.io/nome-app/"
+    validations:
+      required: true

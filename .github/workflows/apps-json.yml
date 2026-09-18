@@ -1,0 +1,143 @@
+name: Aggiorna apps.json del Launcher
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  add-app:
+    if: contains(github.event.issue.labels.*.name, 'add-app')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Aggiungi la app a apps.json
+        id: update
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = context.payload.issue.body || '';
+            function field(label){
+              const re = new RegExp('### ' + label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\s*\\n\\n([^\\n]+)', 'i');
+              const m = body.match(re);
+              return m ? m[1].trim() : '';
+            }
+            let name = field('Nome app');
+            let url = field('Link \\(URL\\)');
+            if (!url || url === '_No response_') { core.setFailed('Link non trovato nella issue.'); return; }
+            if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+            let domain = '';
+            try { domain = new URL(url).hostname; } catch (e) {}
+            if (!name || name === '_No response_') name = domain || url;
+            const icon = domain ? ('https://www.google.com/s2/favicons?sz=128&domain=' + encodeURIComponent(domain)) : '';
+
+            let data = { apps: [] };
+            if (fs.existsSync('apps.json')) {
+              try { data = JSON.parse(fs.readFileSync('apps.json', 'utf8')); } catch (e) {}
+              if (!Array.isArray(data.apps)) data.apps = [];
+            }
+            if (data.apps.some(a => a.url === url)) {
+              core.setOutput('duplicate', 'true');
+              core.setOutput('name', name);
+              return;
+            }
+            data.apps.push({ url, name, icon });
+            fs.writeFileSync('apps.json', JSON.stringify(data, null, 2) + '\n');
+            core.setOutput('duplicate', 'false');
+            core.setOutput('name', name);
+
+      - name: Commit apps.json
+        if: steps.update.outputs.duplicate == 'false'
+        run: |
+          git config user.name "gama-launcher-bot"
+          git config user.email "actions@github.com"
+          git add apps.json
+          git commit -m "Aggiunta app: ${{ steps.update.outputs.name }} (issue #${{ github.event.issue.number }})"
+          git push
+
+      - name: Commenta e chiudi l'issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const dup = '${{ steps.update.outputs.duplicate }}' === 'true';
+            const name = ${{ toJSON(steps.update.outputs.name) }};
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: dup
+                ? '⚠️ Questa app è già presente nel launcher, non è stata aggiunta di nuovo.'
+                : '✅ App aggiunta al launcher: **' + name + '**. Sarà visibile a tutti entro circa un minuto.'
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed'
+            });
+
+  remove-app:
+    if: contains(github.event.issue.labels.*.name, 'remove-app')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rimuovi la app da apps.json
+        id: update
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = context.payload.issue.body || '';
+            function field(label){
+              const re = new RegExp('### ' + label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\s*\\n\\n([^\\n]+)', 'i');
+              const m = body.match(re);
+              return m ? m[1].trim() : '';
+            }
+            let url = field('Link \\(URL\\) da rimuovere');
+            if (!url || url === '_No response_') { core.setFailed('Link non trovato nella issue.'); return; }
+            if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+            let data = { apps: [] };
+            if (fs.existsSync('apps.json')) {
+              try { data = JSON.parse(fs.readFileSync('apps.json', 'utf8')); } catch (e) {}
+              if (!Array.isArray(data.apps)) data.apps = [];
+            }
+            const before = data.apps.length;
+            data.apps = data.apps.filter(a => a.url !== url);
+            fs.writeFileSync('apps.json', JSON.stringify(data, null, 2) + '\n');
+            core.setOutput('removed', before !== data.apps.length ? 'true' : 'false');
+
+      - name: Commit apps.json
+        if: steps.update.outputs.removed == 'true'
+        run: |
+          git config user.name "gama-launcher-bot"
+          git config user.email "actions@github.com"
+          git add apps.json
+          git commit -m "Rimossa app (issue #${{ github.event.issue.number }})"
+          git push
+
+      - name: Commenta e chiudi l'issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const removed = '${{ steps.update.outputs.removed }}' === 'true';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: removed
+                ? '✅ App rimossa dal launcher. Sparirà per tutti entro circa un minuto.'
+                : '⚠️ Non ho trovato nel launcher un app con questo link.'
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed'
+            });

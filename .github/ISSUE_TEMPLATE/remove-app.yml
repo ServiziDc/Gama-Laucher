@@ -1,0 +1,12 @@
+name: "Rimuovi app dal Launcher"
+description: "Rimuovi un'app precedentemente aggiunta al Gama Launcher"
+title: "[Rimuovi App] "
+labels: ["remove-app"]
+body:
+  - type: input
+    id: app_url
+    attributes:
+      label: Link (URL) da rimuovere
+      placeholder: "https://servizidc.github.io/nome-app/"
+    validations:
+      required: true
