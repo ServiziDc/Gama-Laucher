@@ -450,6 +450,12 @@ function faviconFor(url){
   // ha la sua icona (favicon.ico, apple-touch-icon, ecc.).
   return 'https://www.google.com/s2/favicons?sz=128&domain_url='+encodeURIComponent(url);
 }
+function conventionalIconFor(url){
+  // Quasi tutte le app Gama seguono la stessa convenzione (icon-192.png nella
+  // root del progetto): proviamo a prenderla direttamente, è più affidabile
+  // del servizio favicon esterno.
+  try{ return new URL('icon-192.png', url).href; }catch(e){ return null; }
+}
 
 function makeAppBtn({url,name,icon}){
   const a=document.createElement('a');
@@ -458,9 +464,15 @@ function makeAppBtn({url,name,icon}){
   const wrap=document.createElement('div');
   wrap.className='icon-wrap';
   const img=document.createElement('img');
-  // Ricalcola sempre l'icona dal link, ignorando quella eventualmente salvata:
-  // così se il metodo di recupero icona migliora, si aggiorna da solo.
-  img.src=faviconFor(url);
+  // Prova in ordine: icona convenzionale del progetto (icon-192.png), poi il
+  // servizio favicon esterno, infine l'icona generica del launcher.
+  const iconCandidates=[conventionalIconFor(url), faviconFor(url), 'icon-192.png'].filter(Boolean);
+  let iconStep=0;
+  img.src=iconCandidates[0];
+  img.addEventListener('error', function(){
+    iconStep++;
+    if(iconStep<iconCandidates.length){ img.src=iconCandidates[iconStep]; }
+  });
   img.loading='lazy';
   img.alt=name;
   wrap.appendChild(img);
