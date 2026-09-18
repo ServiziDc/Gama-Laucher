@@ -458,7 +458,9 @@ function makeAppBtn({url,name,icon}){
   const wrap=document.createElement('div');
   wrap.className='icon-wrap';
   const img=document.createElement('img');
-  img.src=icon||faviconFor(url);
+  // Ricalcola sempre l'icona dal link, ignorando quella eventualmente salvata:
+  // così se il metodo di recupero icona migliora, si aggiorna da solo.
+  img.src=faviconFor(url);
   img.loading='lazy';
   img.alt=name;
   wrap.appendChild(img);
