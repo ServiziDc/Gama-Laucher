@@ -1,1 +1,9 @@
-{"apps": []}
+{
+  "apps": [
+    {
+      "url": "https://servizidc.github.io/sicurezza-clienti/",
+      "name": "Sicurezza clienti",
+      "icon": "https://www.google.com/s2/favicons?sz=128&domain_url=https%3A%2F%2Fservizidc.github.io%2Fsicurezza-clienti%2F"
+    }
+  ]
+}
