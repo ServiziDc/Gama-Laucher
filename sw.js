@@ -1,4 +1,4 @@
-const CACHE = 'gama-launcher-v12';
+const CACHE = 'gama-launcher-v13';
 const ASSETS = ['./index.html','./manifest.json'];
 
 self.addEventListener('install', e=>{
@@ -13,8 +13,18 @@ self.addEventListener('activate', e=>{
   self.clients.claim();
 });
 
+/* Network-first per index.html e manifest.json: prende sempre la versione più
+   recente dal server quando c'è connessione, e usa la cache solo come riserva
+   se offline. Così gli aggiornamenti del launcher arrivano subito, senza
+   restare bloccati su una versione vecchia salvata in precedenza. */
 self.addEventListener('fetch', e=>{
   e.respondWith(
-    caches.match(e.request).then(r=>r||fetch(e.request))
+    fetch(e.request)
+      .then(res=>{
+        const resClone=res.clone();
+        caches.open(CACHE).then(c=>c.put(e.request, resClone));
+        return res;
+      })
+      .catch(()=>caches.match(e.request))
   );
 });

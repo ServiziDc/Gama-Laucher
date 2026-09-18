@@ -428,8 +428,10 @@ const TOKEN_KEY='gama_gh_token';
 const EMBEDDED_TOKEN='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';
 
 function getGithubToken(promptIfMissing){
-  let t=localStorage.getItem(TOKEN_KEY);
-  if(!t)t=EMBEDDED_TOKEN;
+  // Il token incorporato ha sempre la priorità, per evitare che un token
+  // vecchio/non valido salvato in precedenza nel browser resti in uso.
+  let t=EMBEDDED_TOKEN;
+  if(!t)t=localStorage.getItem(TOKEN_KEY);
   if(!t && promptIfMissing){
     t=prompt('Token GitHub (Personal Access Token, permesso "Contents: Read and write" sul repo '+GH_REPO+').\nViene salvato solo su questo dispositivo.');
     if(t && t.trim()){t=t.trim();localStorage.setItem(TOKEN_KEY,t);}else{t=null;}
@@ -443,7 +445,10 @@ function domainOf(url){
 function faviconFor(url){
   const d=domainOf(url);
   if(!d)return 'icon-192.png';
-  return 'https://www.google.com/s2/favicons?sz=128&domain='+encodeURIComponent(d);
+  // domain_url (invece di domain) guarda la pagina specifica, non solo il dominio:
+  // utile per siti tipo servizidc.github.io/nome-app/ dove ogni sotto-percorso
+  // ha la sua icona (favicon.ico, apple-touch-icon, ecc.).
+  return 'https://www.google.com/s2/favicons?sz=128&domain_url='+encodeURIComponent(url);
 }
 
 function makeAppBtn({url,name,icon}){
